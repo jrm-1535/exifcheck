@@ -1,0 +1,9 @@
+#exifcheck
+
+A small tool for parsing EXIF metadata from any source.
+
+It uses the exif library to parse and check metadata for validity.
+It allows displaying the processed metadata and to save them to a new file
+It allows extracting the original metadata and to save any embedded thumbnail.
+It processes maker notes - so far only a subset of Apple and Nikon maker notes.
+
