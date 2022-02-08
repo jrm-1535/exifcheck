@@ -83,7 +83,7 @@ const (
 
 type tagIds  struct {
     ifdId                   exif.IfdId
-    tags                    []uint
+    tags                    []int
 }
 
 type exifArgs struct {
@@ -108,21 +108,21 @@ func parseRemoveString( pArgs *exifArgs, toRemove string ) error {
         // must start with an ifId, possibly followed by a series of :tagId
         tags := strings.Split( ifdId, ":" )
         ifid, err := strconv.ParseInt(tags[0], 0, 64);  if err != nil {
-            return fmt.Errorf( "syntax error: -r=%d\n", toRemove )
+            return fmt.Errorf( "syntax error: -r=%s\n", toRemove )
         }
 
         if len(tags) == 1 {
             pArgs.removeIfds = append( pArgs.removeIfds, exif.IfdId(ifid) )
         } else {
             pArgs.removeTags = append( pArgs.removeTags,
-                                       tagIds{  exif.IfdId(ifid), []uint{} } )
+                                       tagIds{  exif.IfdId(ifid), []int{} } )
             for i := 1; i < len(tags); i++ {
                 tag, err := strconv.ParseUint(tags[i], 0, 64);  if err != nil {
-                    return fmt.Errorf( "syntax error: -r=%d\n", toRemove )
+                    return fmt.Errorf( "syntax error: -r=%s\n", toRemove )
                 }
                 pArgs.removeTags[len(pArgs.removeTags)-1].tags = append(
                                 pArgs.removeTags[len(pArgs.removeTags)-1].tags,
-                                uint(tag) )
+                                int(tag) )
             }
         }
     }
@@ -198,9 +198,9 @@ func getArgs( ) (* exifArgs, error ) {
 
     switch store[0] {
     case 'k', 'K': // nothing to change
-        pArgs.control.Unknown = exif.Keep
+        pArgs.control.Unknown = exif.KeepTag
     case 'r', 'R':
-        pArgs.control.Unknown = exif.Remove
+        pArgs.control.Unknown = exif.RemoveTag
     case 's', 'S':
         pArgs.control.Unknown = exif.Stop
     default:
@@ -309,16 +309,22 @@ func exifcheck() int {
         for _, ti := range process.removeTags {
             id := ti.ifdId
             for _, tag := range ti.tags {
-                md.RemoveTag( id, tag )
+                err = md.Remove( id, tag )
+                if err != nil {
+                    fmt.Printf( "Error removing tag %s from ifd %s: %v",
+                                 tag, exif.GetIfdName(exif.IfdId(id)), err )
+                    return 1
+                }
             }
         }
     }
 
     for _, id := range process.removeIfds {
-        fmt.Printf("Remove ifd: %v\n", id )
-        err = md.RemoveIfd( id )
+//        fmt.Printf("Remove ifd: %v\n", id )
+        err = md.Remove( id, -1 )
         if err != nil {
-            fmt.Printf("Error removing ifd %s: %v", exif.GetIfdName(id), err )
+            fmt.Printf( "Error removing ifd %s: %v",
+                        exif.GetIfdName(exif.IfdId(id)), err )
             return 1
         }
     }
